@@ -8,7 +8,7 @@ from ._module import Module
 from .utils import init
 
 
-def linear_kernel(DIM_BATCH, DIM_IN, DIM_OUT, WITH_BIAS, TILES, DTYPE):
+def linear_kernel(DIM_BATCH, DIM_IN, DIM_OUT, USE_BIAS, TILES, DTYPE):
     if TILES is None:
         # TODO: default tile sizes heuristic
         raise RuntimeError
@@ -43,7 +43,7 @@ def linear_kernel(DIM_BATCH, DIM_IN, DIM_OUT, WITH_BIAS, TILES, DTYPE):
             # sum += a*b
             wp.tile_matmul(a, b, c)
 
-        if wp.static(WITH_BIAS):
+        if wp.static(USE_BIAS):
             b = wp.tile_load(bias, shape=(1, TILE_N), offset=(0, j * TILE_N))
             c += wp.tile_broadcast(b, shape=(TILE_M, TILE_N))
 
@@ -61,7 +61,7 @@ class Linear(Module):
 
     in_features: int
     out_features: int
-    with_bias: bool
+    use_bias: bool
 
     tiles: tuple[int, int, int] | None
     weight: Array[DType]
@@ -71,7 +71,7 @@ class Linear(Module):
         self,
         in_features: int,
         out_features: int,
-        with_bias: bool = True,
+        use_bias: bool = True,
         tiles: tuple[int, int, int] | None = None,
         device=None,
         dtype=None,
@@ -81,11 +81,11 @@ class Linear(Module):
 
         self.in_features = in_features
         self.out_features = out_features
-        self.with_bias = with_bias
+        self.use_bias = use_bias
 
         # NOTE: transposed
         self.weight = wp.empty((in_features, out_features), dtype=dtype, device=device, requires_grad=True)
-        self.bias = wp.empty((1, out_features), dtype=dtype, device=device, requires_grad=True) if with_bias else None
+        self.bias = wp.empty((1, out_features), dtype=dtype, device=device, requires_grad=True) if use_bias else None
         self.reset_parameters()
 
         self.tiles = tiles
@@ -95,7 +95,7 @@ class Linear(Module):
         fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
         bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
         init.uniform_(self.weight, -bound, bound)
-        if self.with_bias:
+        if self.use_bias:
             init.uniform_(self.bias, -bound, bound)
 
     def reset_kernels(self):
@@ -110,7 +110,7 @@ class Linear(Module):
             y = wp.empty((B, self.out_features), dtype=x.dtype, device=x.device, requires_grad=x.requires_grad)
         if self._kernel is None:
             self._kernel, self._kernel_dims = linear_kernel(
-                B, self.in_features, self.out_features, self.with_bias, self.tiles, x.dtype
+                B, self.in_features, self.out_features, self.use_bias, self.tiles, x.dtype
             )
         inputs = [x, params["weight"], params["bias"]]
         wp.launch_tiled(
