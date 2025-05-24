@@ -142,20 +142,19 @@ class LogSoftmax(Module):
         self._kernel_dims = None
 
     def __call__(self, x: Array[DType], params: dict[str, Array[DType]] = None, y: Array[DType] = None):
-        B = x.shape[0]
-        K = x.shape[1]
+        B, K = x.shape[0], x.shape[1]
         if params is None:
             params = {}
         if y is None:
             y = wp.empty((B, K), dtype=x.dtype, device=x.device, requires_grad=x.requires_grad)
         if self._kernel is None:
             self._kernel, self._kernel_dims = logsoftmax_kernel(B, K, self.axis, self.tiles, x.dtype)
-        inputs = [x]
+        inputs, outputs = [x], [y]
         wp.launch_tiled(
             self._kernel,
             dim=self._kernel_dims,
             inputs=inputs,
-            outputs=[y],
+            outputs=outputs,
             device=x.device,
             block_dim=wp.num_threads,
         )

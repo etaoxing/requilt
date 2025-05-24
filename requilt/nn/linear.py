@@ -112,12 +112,12 @@ class Linear(Module):
             self._kernel, self._kernel_dims = linear_kernel(
                 B, self.in_features, self.out_features, self.use_bias, self.tiles, x.dtype
             )
-        inputs = [x, params["weight"], params["bias"]]
+        inputs, outputs = [x, params["weight"], params["bias"]], [y]
         wp.launch_tiled(
             self._kernel,
             dim=self._kernel_dims,
             inputs=inputs,
-            outputs=[y],
+            outputs=outputs,
             device=x.device,
             block_dim=wp.num_threads,
         )

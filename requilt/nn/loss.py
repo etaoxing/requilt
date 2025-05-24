@@ -43,20 +43,19 @@ class NLLLoss(Module):
     def __call__(
         self, x: Array[DType], target: Array[DType], params: dict[str, Array[DType]] = None, y: Array[DType] = None
     ):
-        B = x.shape[0]
-        K = x.shape[1]
+        B, K = x.shape[0], x.shape[1]
         if params is None:
             params = {}
         if y is None:
             y = wp.zeros((1,), dtype=x.dtype, device=x.device, requires_grad=x.requires_grad)
         if self._kernel is None:
             self._kernel, self._kernel_dims = nll_kernel(B, K, self.tiles, x.dtype)
-        inputs = [x, target]
+        inputs, outputs = [x, target], [y]
         wp.launch(
             self._kernel,
             dim=self._kernel_dims,
             inputs=inputs,
-            outputs=[y],
+            outputs=outputs,
             device=x.device,
             block_dim=wp.num_threads,
         )
