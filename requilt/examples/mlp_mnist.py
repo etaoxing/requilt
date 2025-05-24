@@ -48,8 +48,10 @@ def warp_main(cfg):
     TILE_B = 2
     layers = [
         nn.Linear(in_dim, 256, tiles=(TILE_B, 16, 16)),
+        # nn.LayerNorm(256),
         nn.Activation("relu"),
         nn.Linear(256, 64, tiles=(TILE_B, 16, 16)),
+        # nn.LayerNorm(64),
         nn.Activation("relu"),
         nn.Linear(64, out_dim, tiles=(TILE_B, 16, 5)),
         nn.LogSoftmax(axis=1),

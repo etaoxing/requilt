@@ -4,6 +4,14 @@ import warp as wp
 from warp.types import Array, DType
 
 
+def zeros_(array: Array[DType]):
+    array.zero_()
+
+
+def ones_(array: Array[DType]):
+    array.fill_(1.0)
+
+
 def uniform_(array: Array[DType], a: float = 0.0, b: float = 1.0):
     import torch.nn.init as init
 
